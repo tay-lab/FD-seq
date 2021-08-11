@@ -1,0 +1,257 @@
+Drop-seq analysis Van project - KSHV. 10/21/18
+
+
+STAR --runThreadN 6 --runMode genomeGenerate \
+--genomeDir /mnt/hgfs/Nir_C_Drive/Next_gen_seq/Human_KSHV_genome/genome_dir \
+--genomeFastaFiles /mnt/hgfs/Nir_C_Drive/Next_gen_seq/Human_KSHV_genome/Human_KSHV.fasta \
+--sjdbGTFfile /mnt/hgfs/Nir_C_Drive/Next_gen_seq/Human_KSHV_genome/Human_KSHV.gtf
+
+
+***generate dictionary for genome fasta file - only once per genome ***
+
+java -jar /mnt/hgfs/Nir_C_Drive/Next_gen_seq/Picard/picard.jar CreateSequenceDictionary \
+R=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Human_KSHV_genome/Human_KSHV.fasta \
+O=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Human_KSHV_genome/Human_KSHV.dict
+******
+
+
+**change fastq to bam files, using picard**
+**change directory to picard:  
+
+cd /mnt/hgfs/Nir_C_Drive/Next_gen_seq/Picard
+
+java -jar picard.jar FastqToSam \
+F1=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/negative/negative_R1.fastq \
+F2=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/negative/negative_R2.fastq \
+O=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/negative/negative.bam \
+SM=for_tool_testing
+
+cd /mnt/hgfs/Nir_C_Drive/Next_gen_seq/Drop-seq_tools-1.13/jar
+
+java -jar dropseq.jar TagBamWithReadSequenceExtended \
+INPUT=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/negative/negative.bam \
+OUTPUT=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/negative/negative_tag_Cell.bam \
+SUMMARY=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/negative/negative_tag_Cell.bam_summary.txt \
+BASE_RANGE=1-12 \
+BASE_QUALITY=10 \
+BARCODED_READ=1 \
+DISCARD_READ=False \
+TAG_NAME=XC \
+NUM_BASES_BELOW_QUALITY=1
+
+java -jar dropseq.jar TagBamWithReadSequenceExtended \
+INPUT=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/negative/negative_tag_Cell.bam \
+OUTPUT=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/negative/negative_tag_CellUMI.bam \
+SUMMARY=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/negative/negative_tag_CellUMI.bam_summary.txt \
+BASE_RANGE=13-20 \
+BASE_QUALITY=10 \
+BARCODED_READ=1 \
+DISCARD_READ=True \
+TAG_NAME=XM \
+NUM_BASES_BELOW_QUALITY=1
+
+java -jar dropseq.jar FilterBAM \
+TAG_REJECT=XQ \
+INPUT=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/negative/negative_tag_CellUMI.bam \
+OUTPUT=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/negative/negative_tag_CellUMI_filtered.bam
+
+java -jar dropseq.jar TrimStartingSequence \
+INPUT=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/negative/negative_tag_CellUMI_filtered.bam \
+OUTPUT=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/negative/negative_tag_CellUMI_trimmed.bam \
+OUTPUT_SUMMARY=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/negative/negative_tag_CellUMI_trimmed.txt \
+SEQUENCE=AAGCAGTGGTATCAACGCAGAGTGAATGGG \
+MISMATCHES=0 \
+NUM_BASES=5
+
+java -jar dropseq.jar PolyATrimmer \
+INPUT=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/negative/negative_tag_CellUMI_trimmed.bam \
+OUTPUT=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/negative/negative_tag_CellUMI_trimmed_pA.bam \
+OUTPUT_SUMMARY=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/negative/polyA_trimming_report.txt \
+MISMATCHES=0 \
+NUM_BASES=6
+
+cd /mnt/hgfs/Nir_C_Drive/Next_gen_seq/Picard
+
+java -jar picard.jar SamToFastq \
+INPUT=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/negative/negative_tag_CellUMI_trimmed_pA.bam \
+FASTQ=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/negative/negative_for_mapping.fastq
+
+cd /mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/negative
+
+STAR \
+--runThreadN 6 \
+--genomeDir /mnt/hgfs/Nir_C_Drive/Next_gen_seq/Human_KSHV_genome/genome_dir \
+--readFilesIn /mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/negative/negative_for_mapping.fastq \
+--outFileNamePrefix star_negative_ \
+--outSAMtype BAM Unsorted
+
+java -jar /mnt/hgfs/Nir_C_Drive/Next_gen_seq/Picard/picard.jar SortSam \
+I=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/negative/star_negative_Aligned.out.bam \
+O=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/negative/star_negative_aligned.sorted.bam \
+SO=queryname
+
+java -jar /mnt/hgfs/Nir_C_Drive/Next_gen_seq/Picard/picard.jar MergeBamAlignment \
+REFERENCE_SEQUENCE=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Human_KSHV_genome/Human_KSHV.fasta \
+UNMAPPED_BAM=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/negative/negative_tag_CellUMI_trimmed_pA.bam \
+ALIGNED_BAM=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/negative/star_negative_aligned.sorted.bam \
+OUTPUT=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/negative/star_negative_merged.bam \
+INCLUDE_SECONDARY_ALIGNMENTS=false \
+PAIRED_RUN=false
+
+java -jar /mnt/hgfs/Nir_C_Drive/Next_gen_seq/Drop-seq_tools-1.13/jar/dropseq.jar TagReadWithGeneExon \
+I=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/negative/star_negative_merged.bam \
+O=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/negative/star_negative_exon_tagged.bam \
+ANNOTATIONS_FILE=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Human_KSHV_genome/Human_KSHV.gtf \
+TAG=GE
+
+java -jar /mnt/hgfs/Nir_C_Drive/Next_gen_seq/Drop-seq_tools-1.13/jar/dropseq.jar DetectBeadSynthesisErrors \
+I=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/negative/star_negative_exon_tagged.bam \
+O=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/negative/star_negative_exon_tagged_clean.bam \
+OUTPUT_STATS=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/negative/my.synthesis_stats.txt \
+SUMMARY=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/negative/my.synthesis_stats.summary.txt \
+NUM_BARCODES= 10000 \
+PRIMER_SEQUENCE=AAGCAGTGGTATCAACGCAGAGTAC
+
+java -jar /mnt/hgfs/Nir_C_Drive/Next_gen_seq/Drop-seq_tools-1.13/jar/dropseq.jar BAMTagHistogram \
+I=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/negative/star_negative_exon_tagged_clean.bam \
+O=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/negative/negative_readcounts.txt.gz \
+TAG=XC
+
+
+*********************THIS PART IN MATLAB****************************
+cd 'C:\Users\Nir\Next_gen_seq\Seq_files\181018_dropseq_KSHV\negative'
+gunzip('negative_readcounts.txt.gz');
+b=readtable('negative_readcounts.txt');
+x=cumsum(b{:,1});
+x=x/max(x);
+figure; plot(1:length(x),x);
+set(gca,'XLim',[0,2e3])
+%look for the inflication point and change number of cells below accordingly
+writetable(b(1:500,2),'negative_BC_CELLS.txt','WriteVariableNames',false);
+********************************************************************
+
+java -jar /mnt/hgfs/Nir_C_Drive/Next_gen_seq/Drop-seq_tools-1.13/jar/dropseq.jar DigitalExpression \
+I=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/negative/star_negative_exon_tagged_clean.bam \
+O=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/negative/negative.dge.txt.gz \
+SUMMARY=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/negative/negative_summary_dge.txt \
+CELL_BC_FILE=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/negative/negative_BC_CELLS.txt
+
+*************************************************************************************************
+cd /mnt/hgfs/Nir_C_Drive/Next_gen_seq/Picard
+
+java -jar picard.jar FastqToSam \
+F1=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/positive/positive_R1.fastq \
+F2=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/positive/positive_R2.fastq \
+O=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/positive/positive.bam \
+SM=for_tool_testing
+
+cd /mnt/hgfs/Nir_C_Drive/Next_gen_seq/Drop-seq_tools-1.13/jar
+
+java -jar dropseq.jar TagBamWithReadSequenceExtended \
+INPUT=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/positive/positive.bam \
+OUTPUT=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/positive/positive_tag_Cell.bam \
+SUMMARY=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/positive/positive_tag_Cell.bam_summary.txt \
+BASE_RANGE=1-12 \
+BASE_QUALITY=10 \
+BARCODED_READ=1 \
+DISCARD_READ=False \
+TAG_NAME=XC \
+NUM_BASES_BELOW_QUALITY=1
+
+java -jar dropseq.jar TagBamWithReadSequenceExtended \
+INPUT=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/positive/positive_tag_Cell.bam \
+OUTPUT=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/positive/positive_tag_CellUMI.bam \
+SUMMARY=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/positive/positive_tag_CellUMI.bam_summary.txt \
+BASE_RANGE=13-20 \
+BASE_QUALITY=10 \
+BARCODED_READ=1 \
+DISCARD_READ=True \
+TAG_NAME=XM \
+NUM_BASES_BELOW_QUALITY=1
+
+java -jar dropseq.jar FilterBAM \
+TAG_REJECT=XQ \
+INPUT=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/positive/positive_tag_CellUMI.bam \
+OUTPUT=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/positive/positive_tag_CellUMI_filtered.bam
+
+java -jar dropseq.jar TrimStartingSequence \
+INPUT=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/positive/positive_tag_CellUMI_filtered.bam \
+OUTPUT=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/positive/positive_tag_CellUMI_trimmed.bam \
+OUTPUT_SUMMARY=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/positive/positive_tag_CellUMI_trimmed.txt \
+SEQUENCE=AAGCAGTGGTATCAACGCAGAGTGAATGGG \
+MISMATCHES=0 \
+NUM_BASES=5
+
+java -jar dropseq.jar PolyATrimmer \
+INPUT=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/positive/positive_tag_CellUMI_trimmed.bam \
+OUTPUT=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/positive/positive_tag_CellUMI_trimmed_pA.bam \
+OUTPUT_SUMMARY=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/positive/polyA_trimming_report.txt \
+MISMATCHES=0 \
+NUM_BASES=6
+
+cd /mnt/hgfs/Nir_C_Drive/Next_gen_seq/Picard
+
+java -jar picard.jar SamToFastq \
+INPUT=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/positive/positive_tag_CellUMI_trimmed_pA.bam \
+FASTQ=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/positive/positive_for_mapping.fastq
+
+cd /mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/positive
+
+STAR \
+--runThreadN 6 \
+--genomeDir /mnt/hgfs/Nir_C_Drive/Next_gen_seq/Human_KSHV_genome/genome_dir \
+--readFilesIn /mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/positive/positive_for_mapping.fastq \
+--outFileNamePrefix star_positive_ \
+--outSAMtype BAM Unsorted
+
+java -jar /mnt/hgfs/Nir_C_Drive/Next_gen_seq/Picard/picard.jar SortSam \
+I=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/positive/star_positive_Aligned.out.bam \
+O=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/positive/star_positive_aligned.sorted.bam \
+SO=queryname
+
+java -jar /mnt/hgfs/Nir_C_Drive/Next_gen_seq/Picard/picard.jar MergeBamAlignment \
+REFERENCE_SEQUENCE=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Human_KSHV_genome/Human_KSHV.fasta \
+UNMAPPED_BAM=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/positive/positive_tag_CellUMI_trimmed_pA.bam \
+ALIGNED_BAM=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/positive/star_positive_aligned.sorted.bam \
+OUTPUT=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/positive/star_positive_merged.bam \
+INCLUDE_SECONDARY_ALIGNMENTS=false \
+PAIRED_RUN=false
+
+java -jar /mnt/hgfs/Nir_C_Drive/Next_gen_seq/Drop-seq_tools-1.13/jar/dropseq.jar TagReadWithGeneExon \
+I=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/positive/star_positive_merged.bam \
+O=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/positive/star_positive_exon_tagged.bam \
+ANNOTATIONS_FILE=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Human_KSHV_genome/Human_KSHV.gtf \
+TAG=GE
+
+java -jar /mnt/hgfs/Nir_C_Drive/Next_gen_seq/Drop-seq_tools-1.13/jar/dropseq.jar DetectBeadSynthesisErrors \
+I=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/positive/star_positive_exon_tagged.bam \
+O=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/positive/star_positive_exon_tagged_clean.bam \
+OUTPUT_STATS=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/positive/my.synthesis_stats.txt \
+SUMMARY=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/positive/my.synthesis_stats.summary.txt \
+NUM_BARCODES= 10000 \
+PRIMER_SEQUENCE=AAGCAGTGGTATCAACGCAGAGTAC
+
+java -jar /mnt/hgfs/Nir_C_Drive/Next_gen_seq/Drop-seq_tools-1.13/jar/dropseq.jar BAMTagHistogram \
+I=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/positive/star_positive_exon_tagged_clean.bam \
+O=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/positive/positive_readcounts.txt.gz \
+TAG=XC
+
+*********************THIS PART IN MATLAB****************************
+cd 'C:\Users\Nir\Next_gen_seq\Seq_files\181018_dropseq_KSHV\positive'
+gunzip('negative_readcounts.txt.gz');
+b=readtable('positive_readcounts.txt');
+x=cumsum(b{:,1});
+x=x/max(x);
+figure; plot(1:length(x),x);
+set(gca,'XLim',[0,2e3])
+%look for the inflication point and change number of cells below accordingly
+writetable(b(1:1500,2),'positive_BC_CELLS.txt','WriteVariableNames',false);
+********************************************************************
+
+java -jar /mnt/hgfs/Nir_C_Drive/Next_gen_seq/Drop-seq_tools-1.13/jar/dropseq.jar DigitalExpression \
+I=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/positive/star_positive_exon_tagged_clean.bam \
+O=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/positive/positive.dge.txt.gz \
+SUMMARY=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/positive/positive_summary_dge.txt \
+CELL_BC_FILE=/mnt/hgfs/Nir_C_Drive/Next_gen_seq/Seq_files/181018_dropseq_KSHV/positive/positive_BC_CELLS.txt
+
+ 

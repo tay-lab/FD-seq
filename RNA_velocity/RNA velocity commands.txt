@@ -1,0 +1,46 @@
+#Installation of dependencies
+pip install --install-option="--prefix=/home/hvphan/.local/" rpy2==2.9.4 (problems with later versions)
+
+#Van dropEst/velocyto commands
+module load python/3.7.0
+module load R
+module load bamtools
+module load boost/1.68.0
+module load samtools
+
+For Drop-seq data
+
+/project2/tays/Van/dropEst/build/dropest -m -V -b -f \
+-g /project2/tays/Van/reference_genomes/human_GRCh38/Human_reference_genome/gencode.v27.annotation.gtf \
+-o dropEst_out -L eiEIBA \
+-c /project2/tays/Van/dropEst/configs/drop_seq_velocyto.xml \
+/project2/tays/Van/20180927/Alignments/star_negative_exon_tagged_clean.bam
+#(the BAM file is the out put of DetectBeadSynthesisError)
+#(didn't use human_kshv gtf!)
+
+#dropest_bc_correct doesn't work with drop-seq data, because it doesn't recognize XC tag
+#/home/hvphan/.local/bin/velocyto tools dropest_bc_correct \
+#/project2/tays/Van/20180927/Alignments/star_negative_exon_tagged_clean.tagged.bam \
+#/project2/tays/Van/20180927/Alignments/dropEst_out.rds
+
+/home/hvphan/.local/bin/velocyto run_dropest \
+-b /project2/tays/Van/20180927/Alignments/negative_BC_CELLS.txt \
+-o /project2/tays/Van/20180927/Alignments/negative_velocyto \
+-m /project2/tays/Van/reference_genomes/Human_KSHV_genome/GRCh38_repeat_mask.gtf \
+/project2/tays/Van/20180927/Alignments/star_negative_exon_tagged_clean.tagged.bam \
+/project2/tays/Van/reference_genomes/human_GRCh38/Human_reference_genome/gencode.v27.annotation.gtf
+
+
+
+/project2/tays/Van/dropEst/build/dropest -m -V -b -f \
+-g /project2/tays/Van/reference_genomes/human_GRCh38/Human_reference_genome/gencode.v27.annotation.gtf \
+-o dropEst_out -L eiEIBA \
+-c /project2/tays/Van/dropEst/configs/drop_seq_velocyto.xml \
+/project2/tays/Van/20180927/Alignments/star_positive_exon_tagged_clean.bam
+
+/home/hvphan/.local/bin/velocyto run_dropest \
+-b /project2/tays/Van/20180927/Alignments/positive_BC_CELLS.txt \
+-o /project2/tays/Van/20180927/Alignments/positive_velocyto \
+-m /project2/tays/Van/reference_genomes/Human_KSHV_genome/GRCh38_repeat_mask.gtf \
+/project2/tays/Van/20180927/Alignments/star_positive_exon_tagged_clean.tagged.bam \
+/project2/tays/Van/reference_genomes/human_GRCh38/Human_reference_genome/gencode.v27.annotation.gtf
