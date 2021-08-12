@@ -9,7 +9,7 @@ This repository store the code used to align sequencing data, and analyze count 
 
 ### Technical replicates data
 * alignment folder: alignment code.
-* data_analysis.R and data_analysis.py: normalization and analysis of technical replicates data.
+* data_analysis.R: normalization and analysis of technical replicates data.
 
 ### KSHV data
 * alignment folder: alignment code.
